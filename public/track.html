@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Track Ride</title>
+    <style>
+      html,
+      body,
+      #map {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA13HDimUdSRka8dXCb4LF8hxgTg7PbvpQ"></script>
+
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="completedMessage" style="display: none">
+      <h2>Ride Completed!</h2>
+      <p>Your ride has been completed.</p>
+    </div>
+    <script>
+      (async function () {
+        const rideId = location.pathname.split("/").pop();
+
+        const res = await fetch(`/api/ride/track/${rideId}`);
+        if (!res.ok) {
+          document.body.innerHTML = "<h2>Ride not found</h2>";
+          return;
+        }
+        const data = await res.json();
+
+        if (data.status === "completed") {
+          document.getElementById("map").style.display = "none";
+          document.getElementById("completedMessage").style.display = "block";
+          return;
+        }
+
+        const origin = {
+          lat: data.currentLocation.latitude,
+          lng: data.currentLocation.longitude,
+        };
+        const dest = {
+          lat: data.destination_latitude,
+          lng: data.destination_longitude,
+        };
+
+        const map = new google.maps.Map(document.getElementById("map"), {
+          center: origin,
+          zoom: 15,
+        });
+        const driverMarker = new google.maps.Marker({
+          position: origin,
+          map,
+          title: "Driver",
+        });
+        const destMarker = new google.maps.Marker({
+          position: dest,
+          map,
+          title: "Destination",
+        });
+
+        let line = new google.maps.Polyline({
+          path: [origin, dest],
+          strokeColor: "#0A84FF",
+          map,
+        });
+
+        const socket = io();
+        socket.on("driver:location", ({ rideId: id, latitude, longitude }) => {
+          if (id !== rideId) return;
+          const pos = { lat: latitude, lng: longitude };
+          driverMarker.setPosition(pos);
+          line.setPath([pos, dest]);
+          map.panTo(pos);
+        });
+
+        socket.on("ride:arrived", ({ rideId: id, fare }) => {
+          if (id !== rideId) return;
+          alert(`Ride complete! Fare: ₵${fare.toFixed(2)}`);
+          socket.disconnect();
+        });
+      })();
+    </script>
+  </body>
+</html>
