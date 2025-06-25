@@ -24,7 +24,7 @@ rideRouter.get("/unassigned", getUnassignedRides);
 rideRouter.get("/ridestatus", getRideStats);
 rideRouter.get("/payment-trends", getPaymentTrends);
 rideRouter.get("/driver/:driverId", getDriverRides);
-rideRouter.get("/all", authMiddleware, getAllRides);
+rideRouter.get("/all", getAllRides);
 rideRouter.get("/:rideId", getRideById);
 rideRouter.get("/track/:rideId", trackRide);
 rideRouter.post("/create", createRide);
